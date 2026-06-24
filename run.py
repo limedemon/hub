@@ -576,12 +576,22 @@ async def _end_webapp_session(session: B.Session):
             pass
 
 
+# ── Инициализация БД при старте веб-сервера ──────────────────────────────────
+# run.py = ТОЛЬКО веб-сервер (mini app). Сам бот (polling) запускается отдельно
+# из bot.py — так BotHost держит два независимых процесса и порт не занимается
+# дважды. Веб-процессу нужен только доступ к БД, без polling.
+@app.on_event("startup")
+async def _on_startup():
+    if B._db is None:
+        await B.db_init()
+
+
 # ── Точка входа ───────────────────────────────────────────────────────────────
 async def main():
     port = int(os.getenv("PORT", "3000"))
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="warning")
     server = uvicorn.Server(config)
-    await asyncio.gather(B._main(), server.serve())
+    await server.serve()
 
 if __name__ == "__main__":
     asyncio.run(main())

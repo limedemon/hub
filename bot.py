@@ -85,9 +85,9 @@ class BoldMiddleware:
 # ============================== НАСТРОЙКИ ==============================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8832427200:AAFnfUR-K-MDma_N0wMu9H7MBuKkkJ2Vyfs")
 
-# URL сервиса на Render.com — задай после деплоя через переменную окружения WEBAPP_URL
-# Например: https://battle-bot.onrender.com
-WEBAPP_URL = os.getenv("WEBAPP_URL", "")
+# URL сайта мини-аппа. BotHost хранит его в переменной WEBHOOK_URL
+# (WEBAPP_URL оставлен как запасной вариант). Например: https://bot-....bothost.tech
+WEBAPP_URL = os.getenv("WEBHOOK_URL", "") or os.getenv("WEBAPP_URL", "")
 
 # Свой Telegram ID узнать у @userinfobot. Это ВЛАДЕЛЬЦЫ — их нельзя снять из бота.
 # Дополнительных админов можно добавлять/удалять прямо в админке (хранятся в БД).
@@ -1817,8 +1817,8 @@ async def send_main_menu(message, user_id, username):
         pass
     player = await get_or_create_player(user_id, username)
     kb = main_menu_kb(is_admin(user_id))
-    # Кнопка Mini App если задан WEBAPP_URL
-    if WEBAPP_URL:
+    # Кнопка Mini App если задан WEBAPP_URL (только в основном боте, не в дочерних)
+    if WEBAPP_URL and not IS_CHILD:
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
         wa_kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="🌐 Открыть Mini App", web_app=WebAppInfo(url=WEBAPP_URL + "/webapp/"))
@@ -5671,6 +5671,8 @@ def _spawn_child(b, ads_on):
     env["DB_PATH"]           = _child_db_path(bot_id)
     env["ADMIN_IDS"]         = str(b["owner_id"])   # владелец = админ своего бота
     env["IS_CHILD"]          = "1"
+    env["WEBAPP_URL"]        = ""                   # у дочерних ботов нет мини-аппа
+    env["WEBHOOK_URL"]       = ""
     env["CHANGELOG_CHANNEL"] = ""                   # не слать апдейт-лог в основной канал
     env["AD_CHANNEL"]        = CHANGELOG_CHANNEL if ads_on else ""   # реклама — только на Free
     if _MAIN_USERNAME:
